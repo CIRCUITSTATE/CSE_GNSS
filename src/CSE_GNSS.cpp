@@ -3,8 +3,8 @@
 /**
  * @file CSE_GNSS.cpp
  * @brief Main source file for CSE_GNSS library.
- * @date +05:30 04:34:13 PM 10-07-2023, Monday
- * @version 0.1.0
+ * @date +05:30 12:16:10 AM 13-07-2023, Thursday
+ * @version 0.1.1
  * @author Vishnu Mohanan (@vishnumaiea)
  * @par GitHub Repository: https://github.com/CIRCUITSTATE/CSE_GNSS
  * @par MIT License
@@ -19,7 +19,7 @@
  * @brief NMEA_0183_Data constructor.
  * 
  * @param name The name of the NMEA sentence.eg. "GPRMC".
- * @param dataCount The number of data in the NMEA sentence.
+ * @param dataCount The number of data fields in the NMEA sentence.
  * @param sample A sample string of the NMEA sentence.
  * @return NMEA_0183_Data:: 
  */
@@ -89,7 +89,7 @@ bool NMEA_0183_Data:: parse() {
 /**
  * @brief Set the NMEA sentence.
  * 
- * @param line A valid NMEA sentence.
+ * @param line A valid NMEA sentence. Not checked for validity.
  * @return true If setting was successful.
  * @return false If setting was not successful.
  */
@@ -173,22 +173,18 @@ bool NMEA_0183_Data:: check (String line) {
 
 //======================================================================================//
 /**
- * @brief Find the NMEA sentence in the given lines. Only the first found NMEA of the given
- * type is read. If your GNSS module outputs 10 lines every second, then you should at least
- * read 11 line so that you get all complete lines at least once. Do not remove the newline
- * character from the lines. After finding a valid line, the data is extracted and saved in
- * the object.
+ * @brief Find the particular NMEA sentence from the given lines. The lines have to 
+ * separated by a newline character. Some NMEA sentences can have multiple lines.
+ * In that case, you can specify which occurrence of the NMEA sentence you want to find.
+ * If the occurrence is not specified, the first occurrence will be returned.
  * 
- * The position of the given NMEA line can be used to specify which line to read if there are
- * multiple consecutive lines of the same type. This is useful for reading lines like GPGSA.
- * 
- * @param lines The lines as a String.
- * @param position The position of the given NMEA line to read. Default is 0.
+ * @param lines The lines as a String separated by a newline character.
+ * @param occurrence The occurrence of the given NMEA line to read. Default is 0.
  * @return true Data was successfully parsed and saved.
  * @return false No valid line was found.
  */
-bool NMEA_0183_Data:: find (String lines, int position) {
-  if ((position < 0) || (position > 63)) {
+bool NMEA_0183_Data:: find (String lines, int occurrence) {
+  if ((occurrence < 0) || (occurrence > 63)) {
     GNSS_Parent->Debug_Serial->println ("NMEA_0183_Data find(): Invalid position.");
     return false;
   }
@@ -196,8 +192,8 @@ bool NMEA_0183_Data:: find (String lines, int position) {
   String splittedLines [64] = {""};
   int startIndex = 0;
   int lineCount = 0;  // Total number of lines.
-  int instanceCount = -1; // The number of instances of the given NMEA type.
-  int instanceIndex = -1; // The index of the given NMEA type in the lines array.
+  int occurrenceCount = -1; // The number of instances/occurrence of the given NMEA type in the lines.
+  int occurrenceIndex = -1; // The index of the given NMEA type in the lines array.
 
   // Split the lines to an array.
   for (int i = 0; i < lines.length(); i++) {
@@ -235,35 +231,35 @@ bool NMEA_0183_Data:: find (String lines, int position) {
   // Check if any lines starts with the given NMEA ID.
   for (int i = 0; i < lineCount; i++) {
     if ((splittedLines [i].startsWith (name)) || (splittedLines [i].startsWith (String ("$") + name))) {
-      instanceCount += 1;
+      occurrenceCount += 1;
     }
 
-    // Break if we find the line at the position we want.
-    if (instanceCount == position) {
-      instanceIndex = i;
+    // Break if we find the line at the same occurrence we want.
+    if (occurrenceCount == occurrence) {
+      occurrenceIndex = i;
       break;
     }
   }
 
   // Return false if no valid line was found.
-  if (instanceCount == -1) {
-    GNSS_Parent->Debug_Serial->println ("NMEA_0183_Data find(): No valid line found.");
+  if (occurrenceCount == -1) {
+    GNSS_Parent->Debug_Serial->println ("NMEA_0183_Data find(): No valid lines found.");
     return false;
   }
 
-  // If the instanceCount is not -1, but less than the position, that means there was at least one
+  // If the occurrenceCount is not -1, but less than the position, that means there was at least one
   // line, but not enough to reach the position. For example if you wanted to get the 2nd
-  // GPGSV message in the lines, but there was only one, then the instanceCount would be 0.
-  if (instanceCount < position) {
+  // GPGSV message in the lines, but there was only one, then the occurrenceCount would be 0.
+  if (occurrenceCount < occurrence) {
     GNSS_Parent->Debug_Serial->println ("NMEA_0183_Data find(): Not enough lines to reach the position.");
-    GNSS_Parent->Debug_Serial->println ("NMEA_0183_Data find(): instanceCount: " + String (instanceCount));
+    GNSS_Parent->Debug_Serial->println ("NMEA_0183_Data find(): occurrenceCount: " + String (occurrenceCount));
     return false;
   }
 
-  // If the instanceCount is equal to the position, then we have found the line we want.
-  if (instanceCount == position) {
-    GNSS_Parent->Debug_Serial->println ("NMEA_0183_Data find(): Found " + name + " line at position " + String (instanceCount));
-    set (splittedLines [instanceIndex]);
+  // If the occurrenceCount is equal to the occurrence, then we have found the line we want.
+  if (occurrenceCount == occurrence) {
+    GNSS_Parent->Debug_Serial->println ("NMEA_0183_Data find(): Found " + name + " line at position " + String (occurrenceCount));
+    set (splittedLines [occurrenceIndex]);
     return parse();
   }
 
@@ -281,7 +277,7 @@ int NMEA_0183_Data:: count (String lines) {
   String splittedLines [64] = {""};
   int startIndex = 0;
   int lineCount = 0;
-  int instanceCountCount = 0;
+  int instanceCount = 0;
 
   // Split the lines to an array.
   for (int i = 0; i < lines.length(); i++) {
@@ -296,13 +292,13 @@ int NMEA_0183_Data:: count (String lines) {
   // Check if any lines starts with the given NMEA ID.
   for (int i = 0; i < lineCount; i++) {
     if ((splittedLines [i].startsWith (name)) || (splittedLines [i].startsWith (String ("$") + name))) {
-      instanceCountCount += 1;
+      instanceCount += 1;
     }
   }
 
-  GNSS_Parent->Debug_Serial->println ("NMEA_0183_Data count(): Found " + String (instanceCountCount) + " " + name + " lines.");
+  GNSS_Parent->Debug_Serial->println ("NMEA_0183_Data count(): Found " + String (instanceCount) + " " + name + " lines.");
 
-  return instanceCountCount;
+  return instanceCount;
 }
 
 //======================================================================================//
@@ -342,6 +338,7 @@ CSE_GNSS:: CSE_GNSS (HardwareSerial* gnssSerial, HardwareSerial* debugSerial, ui
   this->gnssBaud = gnssBaud;
   this->debugBaud = debugBaud;
 
+  // Add data to the dummy data object.
   static String NMEA_Sample = "$DUMMY,120556.096,V,123.456,N,123.456,E,1.23,123.45,020723,1.9,W,N,V*33";
   static String NMEA_Data_Names [] = {"Header", "UTC", "Status", "Latitude", "Latitude Direction", "Longitude", "Longitude Direction", "Speed", "Course", "Date", "Mag Variation", "Mag Variation Direction", "Mode", "Second Mode", "Checksum"};
   static String NMEA_Description = "You forgot to add NMEA_0183_Data objects. Please add at least one.";
@@ -352,7 +349,7 @@ CSE_GNSS:: CSE_GNSS (HardwareSerial* gnssSerial, HardwareSerial* debugSerial, ui
 //======================================================================================//
 
 // Only for software serial.
-#if defined(__AVR__) || defined(ESP8266)
+#if SOFTWARE_SERIAL_REQUIRED
   /**
    * @brief Construct a new CSE_GNSS object with software serial port for GNSS module.
    * Debug serial port is still hardware serial. The baudrates are optional. The ports
@@ -371,6 +368,7 @@ CSE_GNSS:: CSE_GNSS (HardwareSerial* gnssSerial, HardwareSerial* debugSerial, ui
   this->gnssBaud = gnssBaud;
   this->debugBaud = debugBaud;
 
+  // Add data to the dummy data object.
   static String NMEA_Sample = "$DUMMY,120556.096,V,123.456,N,123.456,E,1.23,123.45,020723,1.9,W,N,V*33";
   static String NMEA_Data_Names [] = {"Header", "UTC", "Status", "Latitude", "Latitude Direction", "Longitude", "Longitude Direction", "Speed", "Course", "Date", "Mag Variation", "Mag Variation Direction", "Mode", "Second Mode", "Checksum"};
   static String NMEA_Description = "You forgot to add NMEA_0183_Data objects. Please add at least one.";
@@ -549,7 +547,7 @@ int CSE_GNSS:: addData (NMEA_0183_Data* data) {
 //======================================================================================//
 /**
  * @brief Returns the reference to the NMEA_0183_Data object with the given name. If no
- * data with the given name is found, an exception is thrown.
+ * data with the given name is found, a dummy data is returned.
  * 
  * @param name The name of the NMEA_0183_Data object. For example, "GPRMC".
  * @return CSE_GNSS::NMEA_0183_Data_Ref 
