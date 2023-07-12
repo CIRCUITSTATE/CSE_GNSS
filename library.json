@@ -1,0 +1,20 @@
+{
+    "name": "CSE_GNSS",
+    "keywords": "gps, sensor, NMEA, GNSS, positioing",
+    "description": "Arduino library for reading and writing GPS/GNSS receivers with NMEA output.",
+    "repository":
+    {
+        "type": "git",
+        "url": "https://github.com/CIRCUITSTATE/CSE_GNSS.git"
+    },
+    "authors":
+    {
+        "name": "Vishnu Mohanan",
+        "url": "https://github.com/vishnumaiea",
+        "maintainer": true
+    },
+    "version": "0.1.0",
+    "license": "MIT",
+    "frameworks": "arduino",
+    "platforms": "*"
+}
