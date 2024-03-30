@@ -2,9 +2,10 @@
 //======================================================================================//
 /**
  * @file View_GNSS_Data.ino
- * @brief Reads the NMEA output from the GNSS module and prints it on the serial monitor.
- * @date +05:30 04:34:13 PM 10-07-2023, Monday
- * @version 0.1.0
+ * @brief Reads the NMEA output from the GNSS module, extract the data and prints them on
+ * the serial monitor as key-value pairs.
+ * @date +05:30 09:26:31 PM 30-03-2024, Saturday
+ * @version 0.1.2
  * @author Vishnu Mohanan (@vishnumaiea)
  * @par GitHub Repository: https://github.com/CIRCUITSTATE/CSE_GNSS
  * @par MIT License
@@ -59,7 +60,7 @@ void setup() {
  * 
  */
 void loop() {
-  String GNSS_Data = GNSS_Module.read ("$GPRMC");
+  String GNSS_Data = GNSS_Module.read ("$GPRMC"); // Read multiple NMEA data lines from the GNSS module and print them directly.
   delay (10);
 }
 

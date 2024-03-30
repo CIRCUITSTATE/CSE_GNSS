@@ -3,8 +3,8 @@
 /**
  * @file CSE_GNSS.h
  * @brief Main header file for CSE_GNSS library.
- * @date +05:30 12:16:15 AM 13-07-2023, Thursday
- * @version 0.1.1
+ * @date +05:30 09:42:21 PM 30-03-2024, Saturday
+ * @version 0.1.2
  * @author Vishnu Mohanan (@vishnumaiea)
  * @par GitHub Repository: https://github.com/CIRCUITSTATE/CSE_GNSS
  * @par MIT License
@@ -40,7 +40,7 @@ class NMEA_0183_Data {
     CSE_GNSS* GNSS_Parent; // The parent GNSS object
 
     String name; // NMEA sentence type/name
-    String description; // User-redable NMEA sentence description
+    String description; // User-readable NMEA sentence description
     String sentence; // Comma separated NMEA sentence
     String sample; // NMEA sentence sample
     int dataCount; // Number of data in the NMEA sentence, including the header and separate checksum
@@ -53,7 +53,7 @@ class NMEA_0183_Data {
     bool print(); // Print the NMEA sentence
     bool set (String line); // Set the NMEA sentence
     bool check (String line); // Check if the NMEA sentence is valid
-    bool find (String lines, int position = 0); // Find the NMEA sentence in the lines
+    bool find (String lines, int occurrence = 0); // Find the NMEA sentence in the lines
     int count (String lines); // Count the number of particular NMEA sentence in the lines
     int getDataIndex (String dataName); // Get the index of the data field name
 };
@@ -92,7 +92,7 @@ class CSE_GNSS {
 
     // Constructor using one hardware serial port and one software serial port.
     #if SOFTWARE_SERIAL_REQUIRED
-      CSE_GNSS (SoftwareSerial* gnssSerial, uint64_t gnssBaud, HardwareSerial* debugSerial, uint64_t debugBaud);
+      CSE_GNSS (SoftwareSerial* gnssSerial, HardwareSerial* debugSerial, uint64_t gnssBaud = 0, uint64_t debugBaud = 0);
     #endif
 
     bool begin(); // Initialize the serial ports if necessary.

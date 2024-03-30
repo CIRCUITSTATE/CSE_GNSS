@@ -1,6 +1,11 @@
 {
   "files.associations": {
     "array": "cpp",
-    "string": "cpp"
+    "string": "cpp",
+    "*.tcc": "cpp",
+    "unordered_map": "cpp",
+    "functional": "cpp",
+    "string_view": "cpp",
+    "streambuf": "cpp"
   }
 }

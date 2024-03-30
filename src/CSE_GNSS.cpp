@@ -3,8 +3,8 @@
 /**
  * @file CSE_GNSS.cpp
  * @brief Main source file for CSE_GNSS library.
- * @date +05:30 12:16:10 AM 13-07-2023, Thursday
- * @version 0.1.1
+ * @date +05:30 09:42:14 PM 30-03-2024, Saturday
+ * @version 0.1.2
  * @author Vishnu Mohanan (@vishnumaiea)
  * @par GitHub Repository: https://github.com/CIRCUITSTATE/CSE_GNSS
  * @par MIT License
@@ -406,6 +406,10 @@ bool CSE_GNSS:: begin() {
 /**
  * @brief Reads a complete set of NMEA data lines from the GNSS module.
  * 
+ * @param header The type of header we should be looking for. For example, this can be
+ * the "GPRMC" header. The functions reads a complete set of lines from one instance
+ * of the header to the next. This makes sure that you will have a complete set of
+ * normally repeating NMEA data lines.
  * @return String The data read from the GNSS module, separated by newline characters.
  */
 String CSE_GNSS:: read (String header) {
@@ -425,7 +429,7 @@ String CSE_GNSS:: read (String header) {
       // but not the '\n' character.
       String line = GNSS_Serial->readStringUntil ('\n');
 
-      // Find and save the first GPRMC line.
+      // Find and save the first occurance of the specified type of line.
       if ((lineCount == 0) && (line.startsWith (header))) {
         // Replace the last character ('\r') with a newline character.
         line.setCharAt (line.length() - 1, '\n');
@@ -433,16 +437,16 @@ String CSE_GNSS:: read (String header) {
         lineCount++;
       }
 
-      // Stop reading after we find a second instance of GPRMC line.
+      // Stop reading after we find a second instance of the specified type of line.
       else if ((lineCount > 0) && (line.startsWith (header))) {
         readComplete = true;
       }
 
-      // Read and save all other lines until the next GPRMC line.
+      // Read and save all other lines until the next specified type of line.
       else if (lineCount > 0) {
         // Replace the last character ('\r') with a newline character.
         line.setCharAt (line.length() - 1, '\n');
-        dataLines += (line); // Add the line to the data.
+        dataLines += (line); // Add the line to the data array.
         lineCount++;
       }
     }
@@ -455,13 +459,13 @@ String CSE_GNSS:: read (String header) {
     dataLines = dataLines.substring (index + 1);
   }
 
+  // Print the raw lines.
   Debug_Serial->println ("CSE_GNSS read(): Read " + String (lineCount) + " lines.");
-
   Debug_Serial->println ("CSE_GNSS read(): GNSS Data: ");
 
   for (int j = 0; j < dataLines.length(); j++) {
     if (dataLines.charAt (j) == '\r') {
-      Debug_Serial->print ("<CR>");
+      Debug_Serial->print ("<CR>"); // Replace whitespace characters with ASCII equivalents.
     }
     else if (dataLines.charAt (j) == '\n') {
       Debug_Serial->print ("<LF>\n");

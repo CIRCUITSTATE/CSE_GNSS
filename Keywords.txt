@@ -30,5 +30,3 @@ getDataRef                   KEYWORD2
 # Constants (LITERAL1)
 #######################################
 
-PT_MODE_ONESHOT   LITERAL1
-
