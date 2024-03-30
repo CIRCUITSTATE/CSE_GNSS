@@ -1,10 +1,10 @@
-# CSE_ModbusRTU Library API Reference
+# CSE_GNSS Library API Reference
 
 Version 0.1.2, +05:30 12:51:09 AM 31-03-2024, Sunday
 
 ## Index
 
-- [CSE\_ModbusRTU Library API Reference](#cse_modbusrtu-library-api-reference)
+- [CSE\_GNSS Library API Reference](#cse_gnss-library-api-reference)
   - [Index](#index)
   - [Macros](#macros)
   - [Classes](#classes)

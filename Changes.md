@@ -1,5 +1,11 @@
 
 #
+### **+05:30 01:07:28 AM 31-03-2024, Sunday**
+
+  * Fixed title issue in API documentation.
+  * Fixed invalid library category in library.properties.
+
+#
 ### **+05:30 12:52:48 AM 31-03-2024, Sunday**
 
   * Added more documentation.
