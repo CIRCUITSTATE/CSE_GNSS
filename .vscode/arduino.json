@@ -1,6 +1,6 @@
 {
-    "configuration": "FlashFreq=80,UploadSpeed=921600,DebugLevel=none",
-    "board": "esp32:esp32:esp32doit-devkit-v1",
-    "port": "COM22",
-    "sketch": "examples\\Print_GPRMC\\Print_GPRMC.ino"
+    "configuration": "PSRAM=disabled,PartitionScheme=default,CPUFreq=240,FlashMode=qio,FlashFreq=80,FlashSize=4M,UploadSpeed=921600,LoopCore=1,EventsCore=1,DebugLevel=none,EraseFlash=none",
+    "board": "esp32:esp32:dfrobot_firebeetle2_esp32e",
+    "port": "COM8",
+    "sketch": "examples\\View_GNSS_Data\\View_GNSS_Data.ino"
 }

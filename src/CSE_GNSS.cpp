@@ -403,6 +403,26 @@ bool CSE_GNSS:: begin() {
 }
 
 //======================================================================================//
+
+String CSE_GNSS:: read (int byteCount) {
+  if (!inited) {
+    Debug_Serial->println ("CSE_GNSS read(): GNSS module serial port is not initialized.");
+    return "";
+  }
+
+  if ((byteCount <= 0) || (byteCount > 4096)) {
+    Debug_Serial->println ("CSE_GNSS read(): Invalid byte count.");
+    return "";
+  }
+
+  uint8_t byteBuffer [byteCount] = {0};
+  int bytesRead = GNSS_Serial->readBytes (byteBuffer, byteCount);
+  byteBuffer [byteCount] = 0;
+
+  return String (byteBuffer, bytesRead);
+}
+
+//======================================================================================//
 /**
  * @brief Reads a complete set of NMEA data lines from the GNSS module.
  * 
@@ -412,7 +432,7 @@ bool CSE_GNSS:: begin() {
  * normally repeating NMEA data lines.
  * @return String The data read from the GNSS module, separated by newline characters.
  */
-String CSE_GNSS:: read (String header) {
+String CSE_GNSS:: readNMEA (String header, int lineCount) {
   if (!inited) {
     Debug_Serial->println ("CSE_GNSS read(): GNSS module serial port is not initialized.");
     return "";
@@ -420,7 +440,7 @@ String CSE_GNSS:: read (String header) {
 
   String dataLines = "";
   bool readComplete = false;
-  int lineCount = 0;
+  int linesRead = 0;
 
   // Read the specified number of lines.
   while (!readComplete) {
@@ -430,24 +450,24 @@ String CSE_GNSS:: read (String header) {
       String line = GNSS_Serial->readStringUntil ('\n');
 
       // Find and save the first occurance of the specified type of line.
-      if ((lineCount == 0) && (line.startsWith (header))) {
+      if ((linesRead == 0) && (line.startsWith (header))) {
         // Replace the last character ('\r') with a newline character.
         line.setCharAt (line.length() - 1, '\n');
         dataLines += (line); // Add the line to the data.
-        lineCount++;
+        linesRead++;
       }
 
       // Stop reading after we find a second instance of the specified type of line.
-      else if ((lineCount > 0) && (line.startsWith (header))) {
+      else if ((linesRead > 0) && (line.startsWith (header))) {
         readComplete = true;
       }
 
       // Read and save all other lines until the next specified type of line.
-      else if (lineCount > 0) {
+      else if (linesRead > 0) {
         // Replace the last character ('\r') with a newline character.
         line.setCharAt (line.length() - 1, '\n');
         dataLines += (line); // Add the line to the data array.
-        lineCount++;
+        linesRead++;
       }
     }
     delay (10);
@@ -460,7 +480,7 @@ String CSE_GNSS:: read (String header) {
   }
 
   // Print the raw lines.
-  Debug_Serial->println ("CSE_GNSS read(): Read " + String (lineCount) + " lines.");
+  Debug_Serial->println ("CSE_GNSS read(): Read " + String (linesRead) + " lines.");
   Debug_Serial->println ("CSE_GNSS read(): GNSS Data: ");
 
   for (int j = 0; j < dataLines.length(); j++) {
@@ -487,7 +507,7 @@ String CSE_GNSS:: read (String header) {
  * @param lineCount The number of lines to read.
  * @return String The data read from the GNSS module serial port, separated by newline.
  */
-String CSE_GNSS:: read (int lineCount) {
+String CSE_GNSS:: readNMEA (int lineCount) {
   if (!inited) {
     Debug_Serial->println ("CSE_GNSS getData(): GNSS module serial port is not initialized.");
     return "";

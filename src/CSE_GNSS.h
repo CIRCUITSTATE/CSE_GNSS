@@ -96,8 +96,9 @@ class CSE_GNSS {
     #endif
 
     bool begin(); // Initialize the serial ports if necessary.
-    String read (String header = "$GPRMC"); // Read data from the serial port. Specify the start header.
-    String read (int lineCount);  // Read data from the serial port. Specify the number of lines to read.
+    String read (int byteCount);  // Read a specified number of bytes from the GNSS serial port.
+    String readNMEA (int lineCount); // Read the specified number of NMEA lines from the GNSS serial port.
+    String readNMEA (String header = "$GPRMC", int lineCount = 1); // Read a single type of NMEA message.
     int addData (NMEA_0183_Data* data); // Add an NMEA data object to the dataList.
     int getDataCount(); // Get the number of NMEA data objects in the dataList.
     NMEA_0183_Data_Ref getDataRef (String name);  // Get the reference of the NMEA data object.

@@ -6,6 +6,9 @@
     "unordered_map": "cpp",
     "functional": "cpp",
     "string_view": "cpp",
-    "streambuf": "cpp"
+    "streambuf": "cpp",
+    "deque": "cpp",
+    "vector": "cpp",
+    "initializer_list": "cpp"
   }
 }

@@ -1,4 +1,14 @@
 
+
+#
+### **+05:30 12:15:02 PM 21-07-2024, Sunday**
+
+  * Restructuring the code to support mixed protocol messages.
+  * Function names and functionalities are changing. This means breaking changes.
+  * Added `read()` function to read raw data from the GNSS module.
+  * Updated Arduino specification library files.
+  * New Version 🆕 `1.0.0`.
+
 #
 ### **+05:30 01:07:28 AM 31-03-2024, Sunday**
 

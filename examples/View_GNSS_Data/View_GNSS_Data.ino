@@ -42,7 +42,7 @@ void setup() {
   PORT_DEBUG_SERIAL.begin (115200);
 
   // For ESP32 boards
-  PORT_GPS_SERIAL.begin (9600, SERIAL_8N1, 17, 16);
+  PORT_GPS_SERIAL.begin (115200, SERIAL_8N1, 17, 16);
 
   // // For other boards.
   // PORT_GPS_SERIAL.begin (9600);
@@ -60,8 +60,9 @@ void setup() {
  * 
  */
 void loop() {
-  String GNSS_Data = GNSS_Module.read ("$GPRMC"); // Read multiple NMEA data lines from the GNSS module and print them directly.
-  delay (10);
+  String GNSS_Data = GNSS_Module.read (1024); // Read multiple NMEA data lines from the GNSS module and print them directly.
+  PORT_DEBUG_SERIAL.println (GNSS_Data);
+  delay (500);
 }
 
 //======================================================================================//

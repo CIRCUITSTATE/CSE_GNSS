@@ -49,7 +49,7 @@ void setup() {
   PORT_DEBUG_SERIAL.begin (115200);
 
   // For ESP32 boards
-  PORT_GPS_SERIAL.begin (9600, SERIAL_8N1, 17, 16);
+  PORT_GPS_SERIAL.begin (115200, SERIAL_8N1, 17, 16);
 
   // // For other boards.
   // PORT_GPS_SERIAL.begin (9600);
@@ -58,7 +58,7 @@ void setup() {
   GNSS_Module.addData (&NMEA_GPRMC); // Add the data object to the GNSS module.
 
   PORT_DEBUG_SERIAL.println();
-  PORT_DEBUG_SERIAL.println ("--- CSE_GNSS View_GNSS_Data ---");
+  PORT_DEBUG_SERIAL.println ("--- CSE_GNSS Print_GPRMC ---");
   delay (1000);
 }
 
