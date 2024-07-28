@@ -25,6 +25,8 @@
   #include <SoftwareSerial.h> //software serial doesn't work with Arduino Due
 #endif
 
+#define   CONST_SERIAL_BUFFER_LENGTH     4096
+
 //======================================================================================//
 // Forward declarations.
 
@@ -87,6 +89,12 @@ class CSE_GNSS {
 
     NMEA_0183_Data* dummyData; // A dummy NMEA data object to return if the requested data is not found.
 
+    char serialBuffer [CONST_SERIAL_BUFFER_LENGTH] = {0}; // A buffer to store the serial data.
+    char linesBuffer [CONST_SERIAL_BUFFER_LENGTH] = {0}; // A buffer to store the NMEA data.
+
+    uint16_t serialBufferLength = 0;  // Indicates how many valid bytes are in the serial buffer.
+    uint16_t linesBufferLength = 0; // Indicates how many valid lines are in the lines buffer.
+
     // Constructor using two hardware serial ports.
     CSE_GNSS (HardwareSerial* gnssSerial, HardwareSerial* debugSerial, uint64_t gnssBaud = 0, uint64_t debugBaud = 0);
 
@@ -96,7 +104,8 @@ class CSE_GNSS {
     #endif
 
     bool begin(); // Initialize the serial ports if necessary.
-    String read (int byteCount);  // Read a specified number of bytes from the GNSS serial port.
+    uint16_t read (int byteCount);  // Read a specified number of bytes from the GNSS serial port.
+    uint16_t extractNMEA();
     String readNMEA (int lineCount); // Read the specified number of NMEA lines from the GNSS serial port.
     String readNMEA (String header = "$GPRMC", int lineCount = 1); // Read a single type of NMEA message.
     int addData (NMEA_0183_Data* data); // Add an NMEA data object to the dataList.

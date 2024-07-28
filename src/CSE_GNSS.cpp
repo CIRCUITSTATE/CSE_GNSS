@@ -403,23 +403,33 @@ bool CSE_GNSS:: begin() {
 }
 
 //======================================================================================//
-
-String CSE_GNSS:: read (int byteCount) {
+/**
+ * @brief Reads a specified number of bytes from the GNSS module. The read bytes will be
+ * converted to a String and returned. In case of errors, the String will be empty.
+ * 
+ * @param byteCount The number of bytes to read.
+ * @return String The read bytes as a string.
+ */
+uint16_t CSE_GNSS:: read (int byteCount) {
   if (!inited) {
     Debug_Serial->println ("CSE_GNSS read(): GNSS module serial port is not initialized.");
-    return "";
+    return 0;
   }
 
-  if ((byteCount <= 0) || (byteCount > 4096)) {
+  if ((byteCount <= 0) || (byteCount > (CONST_SERIAL_BUFFER_LENGTH - 1))) { // Check if the byte count is valid.
     Debug_Serial->println ("CSE_GNSS read(): Invalid byte count.");
-    return "";
+    return 0;
   }
 
-  uint8_t byteBuffer [byteCount] = {0};
-  int bytesRead = GNSS_Serial->readBytes (byteBuffer, byteCount);
-  byteBuffer [byteCount] = 0;
+  serialBufferLength = GNSS_Serial->readBytes (serialBuffer, byteCount); // Read the bytes from the serial port.
+  serialBuffer [byteCount] = 0; // Null terminate the buffer so that it becomes a proper c-string (if used for character communication).
 
-  return String (byteBuffer, bytesRead);
+  Debug_Serial->print ("CSE_GNSS read(): Read ");
+  Debug_Serial->print (serialBufferLength);
+  Debug_Serial->println (" bytes from GNSS module.");
+
+  // return String (serialBuffer, serialBufferLength);
+  return serialBufferLength;
 }
 
 //======================================================================================//
@@ -508,49 +518,198 @@ String CSE_GNSS:: readNMEA (String header, int lineCount) {
  * @return String The data read from the GNSS module serial port, separated by newline.
  */
 String CSE_GNSS:: readNMEA (int lineCount) {
+  Debug_Serial->println ("CSE_GNSS readNMEA(): Reading " + String (lineCount) + " lines..");
+
   if (!inited) {
     Debug_Serial->println ("CSE_GNSS getData(): GNSS module serial port is not initialized.");
     return "";
   }
 
-  String dataLines = "";
+  read (1024); // Read a set of bytes from the GNSS module.
+  String splitLines = "splitMessages (dataLines);";
+  String nmeaLines [lineCount];
 
-  // Read the specified number of lines.
-  while (lineCount > 0) {
-    if (GNSS_Serial->available() > 0) {
-      // NMEA lines end with '\r\n'. The readStringUntil() will include the '\r' character,
-      // but not the '\n' character.
-      String line = GNSS_Serial->readStringUntil ('\n');
-
-      // Replace the last character ('\r') with a newline character.
-      line.setCharAt (line.length() - 1, '\n');
-      dataLines += (line); // Add the line to the data.
-      lineCount--;
+  // Check and split the lines
+  for (int i = 0; i < lineCount;) {
+    String line = splitLines.substring (0, splitLines.indexOf ('\n') + 1);
+    if (line.length() > 0) {
+      if (line.startsWith ("$G")) {
+        nmeaLines [i] = line;
+        i++;
+      }
+      
+      // Now remove the read line from the source string.
+      // splitLines = splitLines.substring (splitLines.indexOf ('\n') + 1);
     }
-    delay (10);
   }
 
-  // Remove any incomplete lines that do not start with '$'.
-  while (!dataLines.startsWith ("$")) {
-    int index = dataLines.indexOf ('\n');
-    dataLines = dataLines.substring (index + 1);
+  int nmeaLineCount = 0;
+
+  // Count how many non-empty lines we have.
+  for (int i = 0; i < lineCount; i++) {
+    if (nmeaLines [i].length() > 0) {
+      nmeaLineCount++;
+    }
   }
 
-  // Debug_Serial->println ("GNSS Data: ");
+  Debug_Serial->print ("CSE_GNSS readNMEA(): NMEA Lines Count = ");
+  Debug_Serial->println (nmeaLineCount);
 
-  // for (int j = 0; j < dataLines.length(); j++) {
-  //   if (dataLines.charAt (j) == '\r') {
-  //     Debug_Serial->print ("<CR>");
-  //   }
-  //   else if (dataLines.charAt (j) == '\n') {
-  //     Debug_Serial->print ("<LF>\n");
+  // Print the raw lines.
+  Debug_Serial->println ("CSE_GNSS readNMEA(): NMEA Lines = ");
+
+  for (int i = 0; i < nmeaLineCount; i++) {
+    if (nmeaLines [i].length() > 0) {
+      Debug_Serial->println (nmeaLines [i]);
+    }
+  }
+
+  // Debug_Serial->println (nmeaLines);
+
+  return nmeaLines [0];
+}
+
+//======================================================================================//
+
+uint16_t CSE_GNSS:: extractNMEA() {
+  volatile int i, j = 0;
+  volatile bool dollarFound = false;
+  volatile bool gFound = false;
+  volatile bool starFound = false;
+  volatile bool c1Found = false;
+  volatile bool c2Found = false;
+  
+  // The following algorithm works for mixed protocol messages.
+  // It can split mixed NMEA + UBX protocol messages correctly.
+  while (i < (serialBufferLength - 1)) {
+    char c = serialBuffer [i];
+
+    if (c == '$') { // Check for the Dollar sign
+      i++;
+      if (i < serialBufferLength) {
+        c = serialBuffer [i]; // Read the next character
+
+        if (c == 'G') { // Check if the next character is G
+          if (!dollarFound) { // If a dollar sign is not already found
+            linesBuffer [j] = serialBuffer [i - 1];  // Save the dollar sign
+            j++;
+            dollarFound = true;
+            gFound = true;
+            linesBuffer [j] = c;  // Save the G character
+            j++;
+            i++;
+          }
+          else { // If we find multiple dollar signs before finding a star and other positions.
+            dollarFound = false;  // So that a fresh line can be created.
+            gFound = false;
+            linesBuffer [j] = '\n';  // Break the line but do not increment the source line index.
+            j++;
+          }
+          continue; // Skip the remaining steps.
+        }
+      }
+      continue;
+    }
+
+    if ((c == 'G') && (!gFound) && (dollarFound)) {
+      gFound = true;
+      linesBuffer [j] = c;
+      j++;
+      i++;
+      continue;
+    }
+
+    if ((c == '*') && (!starFound) && (gFound)) {
+      starFound = true;
+      linesBuffer [j] = c;
+      j++;
+      i++;
+      continue;
+    }
+
+    if ((!c1Found) && (starFound)) {
+      c1Found = true;
+      linesBuffer [j] = c;
+      j++;
+      i++;
+      continue;
+    }
+
+    if ((!c2Found) && (c1Found)) {
+      c2Found = true;
+      linesBuffer [j] = c;
+      j++;
+      i++;
+      continue;
+    }
+
+    if (c2Found) {
+      linesBuffer [j] = '\n';
+      j++;
+      dollarFound = false;
+      gFound = false;
+      starFound = false;
+      c1Found = false;
+      c2Found = false;
+    }
+
+    if (gFound && dollarFound) {
+      linesBuffer [j] = c;
+      j++;
+    }
+
+    i++;
+  }
+
+  // If the last character is not a new line character, add it.
+  if (linesBuffer [j - 1] != '\n') {
+    linesBuffer [j] = '\n';
+  }
+
+  // // The following algorithm will only work for NMEA messages that end with <CR><LF> sequence.
+  // // UBX protocol message are not CRLF terminated and therefore can not be splitted into lines.
+  // while (index < (dataLines.length() - 1)) {
+  //   char c = dataLines.charAt (index);
+
+  //   if (c == '\r') {
+  //     if (dataLines.charAt (index + 1) == '\n') {
+  //       nmeaLines += '\n';
+  //       index += 2;
+  //     }
+  //     else {
+  //       nmeaLines += c;
+  //       index++;
+  //     }
   //   }
   //   else {
-  //     Debug_Serial->print (dataLines.charAt (j));
+  //     nmeaLines += c;
+  //     index++;
+  //   }
+
+  //   if (index >= (dataLines.length() - 1)) {
+  //     nmeaLines += '\n';  // This might add an extra newline at the end, but that's fine.
   //   }
   // }
 
-  return dataLines;
+  Debug_Serial->print ("CSE_GNSS extractNMEA(): Extracted ");
+  Debug_Serial->print (j);
+  Debug_Serial->println (" characters.");
+
+  for (int i = 0; i < j; i++) {
+    if (linesBuffer [i] == '\n') {
+      Debug_Serial->println ("<LF>");
+    }
+    else if (linesBuffer [i] == '\r') {
+      Debug_Serial->print ("<CR>");
+    }
+    else {
+      Debug_Serial->print (linesBuffer [i]);
+    }
+  }
+
+  Debug_Serial->println();
+
+  return j;
 }
 
 //======================================================================================//
