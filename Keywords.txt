@@ -19,12 +19,14 @@ set                   KEYWORD2
 check                   KEYWORD2
 find                   KEYWORD2
 count                   KEYWORD2
-getDataIndex                   KEYWORD2
-begin                   KEYWORD2
-read                   KEYWORD2
 addData                   KEYWORD2
+getDataIndex                   KEYWORD2
 getDataCount                   KEYWORD2
 getDataRef                   KEYWORD2
+begin                   KEYWORD2
+read                   KEYWORD2
+extractNMEA                   KEYWORD2
+getNmeaDataString                   KEYWORD2
 
 ######################################
 # Constants (LITERAL1)

@@ -1,6 +1,13 @@
 
 
 #
+### **+05:30 12:59:21 AM 03-08-2024, Saturday**
+
+  * Improved the APIs.
+  * Updated the examples.
+  * New Version 🆕 `1.0.1`.
+
+#
 ### **+05:30 12:15:02 PM 21-07-2024, Sunday**
 
   * Restructuring the code to support mixed protocol messages.

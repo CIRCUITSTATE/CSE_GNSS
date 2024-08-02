@@ -1,11 +1,10 @@
 
 //======================================================================================//
 /**
- * @file View_GNSS_Data.ino
- * @brief Reads the NMEA output from the GNSS module, extract the data and prints them on
- * the serial monitor as key-value pairs.
- * @date +05:30 09:26:31 PM 30-03-2024, Saturday
- * @version 0.1.2
+ * @file Test.ino
+ * @brief Sketch for testing the library.
+ * @date +05:30 12:28:05 AM 03-08-2024, Saturday
+ * @version 1.0.1
  * @author Vishnu Mohanan (@vishnumaiea)
  * @par GitHub Repository: https://github.com/CIRCUITSTATE/CSE_GNSS
  * @par MIT License
@@ -21,6 +20,13 @@
 #define   PORT_GPS_SERIAL       Serial1 // GPS serial port
 #define   PORT_DEBUG_SERIAL     Serial // Debug serial port
 
+// For RP2040
+#define   PIN_GPS_SERIAL_TX      0
+#define   PIN_GPS_SERIAL_RX      1
+
+#define   VAL_GPS_BAUDRATE       115200
+#define   VAL_DEBUG_BAUDRATE     115200
+
 //======================================================================================//
 // Forward declarations
 
@@ -33,21 +39,35 @@ void loop();
 // Both ports have to be manually initialized through begin() call.
 CSE_GNSS GNSS_Module (&PORT_GPS_SERIAL, &PORT_DEBUG_SERIAL);
 
+// Following is how we define the format of the GNRMC header (No Second Mode indicator).
+String GNRMC_Sample = "$GNRMC,083559.00,A,4717.11437,N,00833.91522,E,0.004,77.52,091202,,,A,V*57"; // A sample reference line
+String GNRMC_Data_Names [] = {"Header", "UTC", "Status", "Latitude", "Latitude Direction", "Longitude", "Longitude Direction", "Speed", "Course", "Date", "Mag Variation", "Mag Variation Direction", "Mode", "Navigation Status", "Checksum"}; // The palce keys
+String GNRMC_Description = "Recommended Minimum Specific GNSS Data"; // A human readable description of the data.
+
+// Format: Name, Description, Data Count, Data Names, Sample
+NMEA_0183_Data NMEA_GNRMC ("GNRMC", GNRMC_Description, 15, GNRMC_Data_Names, GNRMC_Sample); // An object to save and handle the data.
+
 //======================================================================================//
 /**
  * @brief Setup the serial ports and pins.
  * 
  */
 void setup() {
-  PORT_DEBUG_SERIAL.begin (115200);
+  PORT_DEBUG_SERIAL.begin (VAL_DEBUG_BAUDRATE);
 
-  // For ESP32 boards
-  PORT_GPS_SERIAL.begin (115200, SERIAL_8N1, 17, 16);
+  // // For ESP32 boards
+  // PORT_GPS_SERIAL.begin (VAL_GPS_BAUDRATE, SERIAL_8N1, 17, 16);
+
+  // For RP2040
+  PORT_GPS_SERIAL.setTX (PIN_GPS_SERIAL_TX);
+  PORT_GPS_SERIAL.setRX (PIN_GPS_SERIAL_RX);
+  PORT_GPS_SERIAL.begin (VAL_GPS_BAUDRATE, SERIAL_8N1);
 
   // // For other boards.
-  // PORT_GPS_SERIAL.begin (9600);
+  // PORT_GPS_SERIAL.begin (VAL_GPS_BAUDRATE);
   
   GNSS_Module.begin();
+  GNSS_Module.addData (&NMEA_GNRMC); // Add the data object to the GNSS module.
 
   PORT_DEBUG_SERIAL.println();
   PORT_DEBUG_SERIAL.println ("--- CSE_GNSS Test ---");
@@ -60,11 +80,18 @@ void setup() {
  * 
  */
 void loop() {
-  GNSS_Module.read (255); // Read multiple NMEA data lines from the GNSS module and print them directly.
+  // GNSS_Module.read (255); // Read multiple NMEA data lines from the GNSS module and print them directly.
   // PORT_DEBUG_SERIAL.println (String (GNSS_Module.serialBuffer, GNSS_Module.serialBufferLength));
 
+  // int i = GNSS_Module.extractNMEA();
+  // GNSS_Module.readNMEA (3);
+
+  GNSS_Module.read (1024);
   GNSS_Module.extractNMEA();
-  // GNSS_Module.readNMEA (1);
+  String GNSS_Data = GNSS_Module.getNmeaDataString();
+
+  GNSS_Module.getDataRef ("GNRMC").find (GNSS_Data); // Find the GNRMC sentences in the read data
+  GNSS_Module.getDataRef ("GNRMC").print(); // Printed the GNRMC sentences in preformatted format
 
   delay (500);
 }

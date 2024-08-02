@@ -3,8 +3,8 @@
 /**
  * @file CSE_GNSS.cpp
  * @brief Main source file for CSE_GNSS library.
- * @date +05:30 09:42:14 PM 30-03-2024, Saturday
- * @version 0.1.2
+ * @date +05:30 12:27:56 AM 03-08-2024, Saturday
+ * @version 1.0.1
  * @author Vishnu Mohanan (@vishnumaiea)
  * @par GitHub Repository: https://github.com/CIRCUITSTATE/CSE_GNSS
  * @par MIT License
@@ -179,25 +179,28 @@ bool NMEA_0183_Data:: check (String line) {
  * If the occurrence is not specified, the first occurrence will be returned.
  * 
  * @param lines The lines as a String separated by a newline character.
- * @param occurrence The occurrence of the given NMEA line to read. Default is 0.
+ * @param occurrence The occurrence of the given NMEA line to read. Default is 1 (1st).
  * @return true Data was successfully parsed and saved.
  * @return false No valid line was found.
  */
 bool NMEA_0183_Data:: find (String lines, int occurrence) {
-  if ((occurrence < 0) || (occurrence > 63)) {
+  if ((occurrence < 1) || (occurrence > (CONST_MAX_NMEA_LINES_COUNT - 1))) {
     GNSS_Parent->Debug_Serial->println ("NMEA_0183_Data find(): Invalid position.");
     return false;
   }
 
-  String splittedLines [64] = {""};
+  String splittedLines [CONST_MAX_NMEA_LINES_COUNT] = {""};
   int startIndex = 0;
   int lineCount = 0;  // Total number of lines.
-  int occurrenceCount = -1; // The number of instances/occurrence of the given NMEA type in the lines.
+  int occurrenceCount = 0; // The number of instances/occurrence of the given NMEA type in the lines.
   int occurrenceIndex = -1; // The index of the given NMEA type in the lines array.
 
   // Split the lines to an array.
   for (int i = 0; i < lines.length(); i++) {
     if ((lines.charAt (i) == '\n') || (i == (lines.length() - 1))) {
+      if (lineCount >= CONST_MAX_NMEA_LINES_COUNT) {
+        break;
+      }
       // The LF character will be dropped here.
       splittedLines [lineCount] = lines.substring (startIndex, i);
       startIndex = i + 1;
@@ -251,14 +254,14 @@ bool NMEA_0183_Data:: find (String lines, int occurrence) {
   // line, but not enough to reach the position. For example if you wanted to get the 2nd
   // GPGSV message in the lines, but there was only one, then the occurrenceCount would be 0.
   if (occurrenceCount < occurrence) {
-    GNSS_Parent->Debug_Serial->println ("NMEA_0183_Data find(): Not enough lines to reach the position.");
+    GNSS_Parent->Debug_Serial->println ("NMEA_0183_Data find(): Not enough lines to find the required occurence.");
     GNSS_Parent->Debug_Serial->println ("NMEA_0183_Data find(): occurrenceCount: " + String (occurrenceCount));
     return false;
   }
 
   // If the occurrenceCount is equal to the occurrence, then we have found the line we want.
   if (occurrenceCount == occurrence) {
-    GNSS_Parent->Debug_Serial->println ("NMEA_0183_Data find(): Found " + name + " line at position " + String (occurrenceCount));
+    GNSS_Parent->Debug_Serial->println ("NMEA_0183_Data find(): Found " + name + " line at position " + String (occurrenceIndex));
     set (splittedLines [occurrenceIndex]);
     return parse();
   }
@@ -274,7 +277,7 @@ bool NMEA_0183_Data:: find (String lines, int occurrence) {
  * @return int The number of lines that starts with the given NMEA ID.
  */
 int NMEA_0183_Data:: count (String lines) {
-  String splittedLines [64] = {""};
+  String splittedLines [CONST_MAX_NMEA_LINES_COUNT] = {""};
   int startIndex = 0;
   int lineCount = 0;
   int instanceCount = 0;
@@ -382,14 +385,17 @@ CSE_GNSS:: CSE_GNSS (HardwareSerial* gnssSerial, HardwareSerial* debugSerial, ui
  * @brief Initializes the GNSS module serial port. You should have already set the baudrate
  * and the serial port before calling this function.
  * 
+ * By default the port is not initialized as the default value of gnssBaud and debugBaud is 0.
+ * The serial ports will only be initialized if a non-zero value is set for the baudrates.
+ * 
+ * Regardless of how you initialize the serial port, it is important to call this function
+ * to let the library know that the port was initialized.
+ * 
  * @return true GNSS initialization was successful.
  * @return false GNSS initialization failed.
  */
 bool CSE_GNSS:: begin() {
   if (!inited) {
-    // By default, the baudrates will be 0. If they are not 0, then we will initialize the serial ports.
-    // So if you supply a valid baudrate, the serial port will be initialized here.
-    // Otherwise, you can initialize the serial ports yourself.
     if (gnssBaud != 0) {
       GNSS_Serial->begin (gnssBaud);
     }
@@ -405,10 +411,12 @@ bool CSE_GNSS:: begin() {
 //======================================================================================//
 /**
  * @brief Reads a specified number of bytes from the GNSS module. The read bytes will be
- * converted to a String and returned. In case of errors, the String will be empty.
+ * saved to the `gnssDataBuffer`. `gnssDataBufferLength` will hold the number of valid
+ * data bytes in the buffer. Only that much data must be read for further processing.
+ * Returns the number of bytes read at the end.
  * 
  * @param byteCount The number of bytes to read.
- * @return String The read bytes as a string.
+ * @return uint16_t The number of bytes read.
  */
 uint16_t CSE_GNSS:: read (int byteCount) {
   if (!inited) {
@@ -421,189 +429,75 @@ uint16_t CSE_GNSS:: read (int byteCount) {
     return 0;
   }
 
-  serialBufferLength = GNSS_Serial->readBytes (serialBuffer, byteCount); // Read the bytes from the serial port.
-  serialBuffer [byteCount] = 0; // Null terminate the buffer so that it becomes a proper c-string (if used for character communication).
+  gnssDataBufferLength = GNSS_Serial->readBytes (gnssDataBuffer, byteCount); // Read the bytes from the serial port.
+  // gnssDataBuffer [byteCount] = 0; // Null terminate the buffer so that it becomes a proper c-string (if used for character communication).
 
   Debug_Serial->print ("CSE_GNSS read(): Read ");
-  Debug_Serial->print (serialBufferLength);
+  Debug_Serial->print (gnssDataBufferLength);
   Debug_Serial->println (" bytes from GNSS module.");
 
-  // return String (serialBuffer, serialBufferLength);
-  return serialBufferLength;
+  // return String (gnssDataBuffer, gnssDataBufferLength);
+  return gnssDataBufferLength;
+}
+
+
+//======================================================================================//
+/**
+ * @brief Converts the contents of the `nmeaDataBuffer` to a String object.
+ * 
+ * @return String The converted string.
+ */
+String CSE_GNSS:: getNmeaDataString() {
+  // nmeaDataBuffer [nmeaDataBufferLength] = 0;
+  return String (nmeaDataBuffer, nmeaDataBufferLength);
 }
 
 //======================================================================================//
 /**
- * @brief Reads a complete set of NMEA data lines from the GNSS module.
+ * @brief Extracts NMEA sentences from the GNSS data buffer. This removes any redundant
+ * or unsupported data from the buffer. This can include mixed protocol messages, non-printable
+ * chracters, etc. Valid NMEA sentences will be read and added to the buffer with each line
+ * ending a single newline character (LF).
  * 
- * @param header The type of header we should be looking for. For example, this can be
- * the "GPRMC" header. The functions reads a complete set of lines from one instance
- * of the header to the next. This makes sure that you will have a complete set of
- * normally repeating NMEA data lines.
- * @return String The data read from the GNSS module, separated by newline characters.
+ * @return uint16_t The number of valid bytes in the NMEA data buffer.
  */
-String CSE_GNSS:: readNMEA (String header, int lineCount) {
-  if (!inited) {
-    Debug_Serial->println ("CSE_GNSS read(): GNSS module serial port is not initialized.");
-    return "";
-  }
-
-  String dataLines = "";
-  bool readComplete = false;
-  int linesRead = 0;
-
-  // Read the specified number of lines.
-  while (!readComplete) {
-    if (GNSS_Serial->available() > 0) {
-      // NMEA lines end with '\r\n'. The readStringUntil() will include the '\r' character,
-      // but not the '\n' character.
-      String line = GNSS_Serial->readStringUntil ('\n');
-
-      // Find and save the first occurance of the specified type of line.
-      if ((linesRead == 0) && (line.startsWith (header))) {
-        // Replace the last character ('\r') with a newline character.
-        line.setCharAt (line.length() - 1, '\n');
-        dataLines += (line); // Add the line to the data.
-        linesRead++;
-      }
-
-      // Stop reading after we find a second instance of the specified type of line.
-      else if ((linesRead > 0) && (line.startsWith (header))) {
-        readComplete = true;
-      }
-
-      // Read and save all other lines until the next specified type of line.
-      else if (linesRead > 0) {
-        // Replace the last character ('\r') with a newline character.
-        line.setCharAt (line.length() - 1, '\n');
-        dataLines += (line); // Add the line to the data array.
-        linesRead++;
-      }
-    }
-    delay (10);
-  }
-
-  // Remove any incomplete lines that do not start with '$'.
-  while (!dataLines.startsWith ("$")) {
-    int index = dataLines.indexOf ('\n');
-    dataLines = dataLines.substring (index + 1);
-  }
-
-  // Print the raw lines.
-  Debug_Serial->println ("CSE_GNSS read(): Read " + String (linesRead) + " lines.");
-  Debug_Serial->println ("CSE_GNSS read(): GNSS Data: ");
-
-  for (int j = 0; j < dataLines.length(); j++) {
-    if (dataLines.charAt (j) == '\r') {
-      Debug_Serial->print ("<CR>"); // Replace whitespace characters with ASCII equivalents.
-    }
-    else if (dataLines.charAt (j) == '\n') {
-      Debug_Serial->print ("<LF>\n");
-    }
-    else {
-      Debug_Serial->print (dataLines.charAt (j));
-    }
-  }
-
-  Debug_Serial->println();
-
-  return dataLines;
-}
-
-//======================================================================================//
-/**
- * @brief Read the specified number of lines from the GNSS module serial port.
- * 
- * @param lineCount The number of lines to read.
- * @return String The data read from the GNSS module serial port, separated by newline.
- */
-String CSE_GNSS:: readNMEA (int lineCount) {
-  Debug_Serial->println ("CSE_GNSS readNMEA(): Reading " + String (lineCount) + " lines..");
-
-  if (!inited) {
-    Debug_Serial->println ("CSE_GNSS getData(): GNSS module serial port is not initialized.");
-    return "";
-  }
-
-  read (1024); // Read a set of bytes from the GNSS module.
-  String splitLines = "splitMessages (dataLines);";
-  String nmeaLines [lineCount];
-
-  // Check and split the lines
-  for (int i = 0; i < lineCount;) {
-    String line = splitLines.substring (0, splitLines.indexOf ('\n') + 1);
-    if (line.length() > 0) {
-      if (line.startsWith ("$G")) {
-        nmeaLines [i] = line;
-        i++;
-      }
-      
-      // Now remove the read line from the source string.
-      // splitLines = splitLines.substring (splitLines.indexOf ('\n') + 1);
-    }
-  }
-
-  int nmeaLineCount = 0;
-
-  // Count how many non-empty lines we have.
-  for (int i = 0; i < lineCount; i++) {
-    if (nmeaLines [i].length() > 0) {
-      nmeaLineCount++;
-    }
-  }
-
-  Debug_Serial->print ("CSE_GNSS readNMEA(): NMEA Lines Count = ");
-  Debug_Serial->println (nmeaLineCount);
-
-  // Print the raw lines.
-  Debug_Serial->println ("CSE_GNSS readNMEA(): NMEA Lines = ");
-
-  for (int i = 0; i < nmeaLineCount; i++) {
-    if (nmeaLines [i].length() > 0) {
-      Debug_Serial->println (nmeaLines [i]);
-    }
-  }
-
-  // Debug_Serial->println (nmeaLines);
-
-  return nmeaLines [0];
-}
-
-//======================================================================================//
-
 uint16_t CSE_GNSS:: extractNMEA() {
-  volatile int i, j = 0;
-  volatile bool dollarFound = false;
-  volatile bool gFound = false;
-  volatile bool starFound = false;
-  volatile bool c1Found = false;
-  volatile bool c2Found = false;
+  bool dollarFound = false;
+  bool gFound = false;
+  bool starFound = false;
+  bool c1Found = false;
+  bool c2Found = false;
+
+  Debug_Serial->print ("CSE_GNSS extractNMEA(): Extracting NMEA lines.. GNSS data buffer length is ");
+  Debug_Serial->println (gnssDataBufferLength);
   
   // The following algorithm works for mixed protocol messages.
   // It can split mixed NMEA + UBX protocol messages correctly.
-  while (i < (serialBufferLength - 1)) {
-    char c = serialBuffer [i];
+  int destIndex = 0;
+
+  for (int sourceIndex = 0; sourceIndex < (gnssDataBufferLength - 1);) {
+    char c = gnssDataBuffer [sourceIndex];
 
     if (c == '$') { // Check for the Dollar sign
-      i++;
-      if (i < serialBufferLength) {
-        c = serialBuffer [i]; // Read the next character
+      sourceIndex++;
+      if (sourceIndex < gnssDataBufferLength) {
+        c = gnssDataBuffer [sourceIndex]; // Read the next character
 
         if (c == 'G') { // Check if the next character is G
           if (!dollarFound) { // If a dollar sign is not already found
-            linesBuffer [j] = serialBuffer [i - 1];  // Save the dollar sign
-            j++;
+            nmeaDataBuffer [destIndex] = gnssDataBuffer [sourceIndex - 1];  // Save the dollar sign
+            destIndex++;
             dollarFound = true;
             gFound = true;
-            linesBuffer [j] = c;  // Save the G character
-            j++;
-            i++;
+            nmeaDataBuffer [destIndex] = c;  // Save the G character
+            destIndex++;
+            sourceIndex++;
           }
           else { // If we find multiple dollar signs before finding a star and other positions.
             dollarFound = false;  // So that a fresh line can be created.
             gFound = false;
-            linesBuffer [j] = '\n';  // Break the line but do not increment the source line index.
-            j++;
+            nmeaDataBuffer [destIndex] = '\n';  // Break the line but do not increment the source line index.
+            destIndex++;
           }
           continue; // Skip the remaining steps.
         }
@@ -613,39 +507,39 @@ uint16_t CSE_GNSS:: extractNMEA() {
 
     if ((c == 'G') && (!gFound) && (dollarFound)) {
       gFound = true;
-      linesBuffer [j] = c;
-      j++;
-      i++;
+      nmeaDataBuffer [destIndex] = c;
+      destIndex++;
+      sourceIndex++;
       continue;
     }
 
     if ((c == '*') && (!starFound) && (gFound)) {
       starFound = true;
-      linesBuffer [j] = c;
-      j++;
-      i++;
+      nmeaDataBuffer [destIndex] = c;
+      destIndex++;
+      sourceIndex++;
       continue;
     }
 
     if ((!c1Found) && (starFound)) {
       c1Found = true;
-      linesBuffer [j] = c;
-      j++;
-      i++;
+      nmeaDataBuffer [destIndex] = c;
+      destIndex++;
+      sourceIndex++;
       continue;
     }
 
     if ((!c2Found) && (c1Found)) {
       c2Found = true;
-      linesBuffer [j] = c;
-      j++;
-      i++;
+      nmeaDataBuffer [destIndex] = c;
+      destIndex++;
+      sourceIndex++;
       continue;
     }
 
     if (c2Found) {
-      linesBuffer [j] = '\n';
-      j++;
+      nmeaDataBuffer [destIndex] = '\n';
+      destIndex++;
       dollarFound = false;
       gFound = false;
       starFound = false;
@@ -654,62 +548,86 @@ uint16_t CSE_GNSS:: extractNMEA() {
     }
 
     if (gFound && dollarFound) {
-      linesBuffer [j] = c;
-      j++;
+      nmeaDataBuffer [destIndex] = c;
+      destIndex++;
     }
 
-    i++;
+    sourceIndex++;
   }
 
+  nmeaDataBufferLength = destIndex;
+  
   // If the last character is not a new line character, add it.
-  if (linesBuffer [j - 1] != '\n') {
-    linesBuffer [j] = '\n';
+  if (nmeaDataBuffer [nmeaDataBufferLength] != '\n') {
+    nmeaDataBuffer [nmeaDataBufferLength] = '\n';
+    nmeaDataBufferLength++;
   }
 
-  // // The following algorithm will only work for NMEA messages that end with <CR><LF> sequence.
-  // // UBX protocol message are not CRLF terminated and therefore can not be splitted into lines.
-  // while (index < (dataLines.length() - 1)) {
-  //   char c = dataLines.charAt (index);
+  Debug_Serial->println ("CSE_GNSS extractNMEA(): Removing CR character..");
 
-  //   if (c == '\r') {
-  //     if (dataLines.charAt (index + 1) == '\n') {
-  //       nmeaLines += '\n';
-  //       index += 2;
-  //     }
-  //     else {
-  //       nmeaLines += c;
-  //       index++;
-  //     }
+  // Check if there are <CR> characters in the buffer and replace them with <LF> characters.
+  for (int i = 0; i < nmeaDataBufferLength; i++) {
+    if (nmeaDataBuffer [i] == '\r') {
+      nmeaDataBuffer [i] = '\n';
+    }
+  }
+
+  Debug_Serial->print ("CSE_GNSS extractNMEA(): Extracted ");
+  Debug_Serial->print (nmeaDataBufferLength);
+  Debug_Serial->println (" characters.");
+
+  // for (int i = 0; i < nmeaDataBufferLength; i++) {
+  //   if (nmeaDataBuffer [i] == '\n') {
+  //     Debug_Serial->println ("<LF>");
+  //   }
+  //   else if (nmeaDataBuffer [i] == '\r') {
+  //     Debug_Serial->print ("<CR>");
   //   }
   //   else {
-  //     nmeaLines += c;
-  //     index++;
-  //   }
-
-  //   if (index >= (dataLines.length() - 1)) {
-  //     nmeaLines += '\n';  // This might add an extra newline at the end, but that's fine.
+  //     Debug_Serial->print (nmeaDataBuffer [i]);
   //   }
   // }
 
-  Debug_Serial->print ("CSE_GNSS extractNMEA(): Extracted ");
-  Debug_Serial->print (j);
-  Debug_Serial->println (" characters.");
+  Debug_Serial->println ("CSE_GNSS extractNMEA(): Removing non-printable characters..");
 
-  for (int i = 0; i < j; i++) {
-    if (linesBuffer [i] == '\n') {
+  char tempBuffer [nmeaDataBufferLength] = {0};
+
+  // Check if each chracters is a printable ASCII character and only copy the ones that are.
+  for (int i = 0, k = 0; i < nmeaDataBufferLength; i++) {
+    if (((nmeaDataBuffer [i] > 0x20) && (nmeaDataBuffer [i] <= 0x7E)) || (nmeaDataBuffer [i] == '\n') || (nmeaDataBuffer [i] == '\r')) {
+      tempBuffer [k] = nmeaDataBuffer [i];
+      // Debug_Serial->print (tempBuffer [k]);
+      k++;
+    }
+    if (i == (nmeaDataBufferLength - 1)) {
+      nmeaDataBufferLength = k;
+    }
+  }
+
+  // Copy the temporary buffer to the original buffer.
+  for (int i = 0; i < nmeaDataBufferLength; i++) {
+    nmeaDataBuffer [i] = tempBuffer [i];
+  }
+
+  Debug_Serial->print ("CSE_GNSS extractNMEA(): Found ");
+  Debug_Serial->print (nmeaDataBufferLength);
+  Debug_Serial->println (" valid characters.");
+
+  for (int i = 0; i < nmeaDataBufferLength; i++) {
+    if (nmeaDataBuffer [i] == '\n') {
       Debug_Serial->println ("<LF>");
     }
-    else if (linesBuffer [i] == '\r') {
+    else if (nmeaDataBuffer [i] == '\r') {
       Debug_Serial->print ("<CR>");
     }
     else {
-      Debug_Serial->print (linesBuffer [i]);
+      Debug_Serial->print (nmeaDataBuffer [i]);
     }
   }
 
   Debug_Serial->println();
 
-  return j;
+  return nmeaDataBufferLength;
 }
 
 //======================================================================================//
@@ -745,6 +663,8 @@ CSE_GNSS::NMEA_0183_Data_Ref CSE_GNSS:: getDataRef (String name) {
       return *dataList [i];
     }
   }
+
+  return *dummyData;
 }
 
 //======================================================================================//
@@ -763,6 +683,8 @@ CSE_GNSS::NMEA_0183_Data_Ref CSE_GNSS:: getDataRef (int index) {
   if ((index >= 0) && (index < dataCount)) {
     return *dataList [index];
   }
+
+  return *dummyData;
 }
 
 //======================================================================================//

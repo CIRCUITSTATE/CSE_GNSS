@@ -3,8 +3,8 @@
 /**
  * @file Print_GPRMC.ino
  * @brief Reads the NMEA output from the GNSS module and prints it on the serial monitor.
- * @date +05:30 09:26:37 PM 30-03-2024, Saturday
- * @version 0.1.2
+ * @date +05:30 12:28:39 AM 03-08-2024, Saturday
+ * @version 1.0.1
  * @author Vishnu Mohanan (@vishnumaiea)
  * @par GitHub Repository: https://github.com/CIRCUITSTATE/CSE_GNSS
  * @par MIT License
@@ -17,8 +17,19 @@
 
 //======================================================================================//
 
-#define   PORT_GPS_SERIAL       Serial1 // GPS serial port
-#define   PORT_DEBUG_SERIAL     Serial // Debug serial port
+#define   PORT_GPS_SERIAL         Serial1   // GPS serial port
+#define   PORT_DEBUG_SERIAL       Serial    // Debug serial port
+
+// For RP2040
+#define   PIN_GPS_SERIAL_TX       0
+#define   PIN_GPS_SERIAL_RX       1
+
+// // For ESP32
+// #define   PIN_GPS_SERIAL_TX       16
+// #define   PIN_GPS_SERIAL_RX       17
+
+#define   VAL_GPS_BAUDRATE        115200
+#define   VAL_DEBUG_BAUDRATE      115200
 
 //======================================================================================//
 // Forward declarations
@@ -46,19 +57,24 @@ NMEA_0183_Data NMEA_GPRMC ("GPRMC", GPRMC_Description, 14, GPRMC_Data_Names, GPR
  * 
  */
 void setup() {
-  PORT_DEBUG_SERIAL.begin (115200);
+  PORT_DEBUG_SERIAL.begin (VAL_DEBUG_BAUDRATE);
 
-  // For ESP32 boards
-  PORT_GPS_SERIAL.begin (115200, SERIAL_8N1, 17, 16);
+  // // For ESP32 boards
+  // PORT_GPS_SERIAL.begin (VAL_GPS_BAUDRATE, SERIAL_8N1, PIN_GPS_SERIAL_RX, PIN_GPS_SERIAL_TX);
+
+  // For RP2040
+  PORT_GPS_SERIAL.setRX (PIN_GPS_SERIAL_RX);
+  PORT_GPS_SERIAL.setTX (PIN_GPS_SERIAL_TX);
+  PORT_GPS_SERIAL.begin (VAL_GPS_BAUDRATE, SERIAL_8N1);
 
   // // For other boards.
-  // PORT_GPS_SERIAL.begin (9600);
+  // PORT_GPS_SERIAL.begin (VAL_GPS_BAUDRATE);
   
   GNSS_Module.begin();  // Initialize the GNSS module.
   GNSS_Module.addData (&NMEA_GPRMC); // Add the data object to the GNSS module.
 
   PORT_DEBUG_SERIAL.println();
-  PORT_DEBUG_SERIAL.println ("--- CSE_GNSS Print_GPRMC ---");
+  PORT_DEBUG_SERIAL.println ("--- CSE_GNSS [Print_GPRMC] ---");
   delay (1000);
 }
 
@@ -68,9 +84,12 @@ void setup() {
  * 
  */
 void loop() {
-  String GNSS_Data = GNSS_Module.read ("$GPRMC"); // Read multiple NMEA data lines from the GNSS module
-  GNSS_Module.getDataRef ("GPRMC").find (GNSS_Data, 0); // Find the GPRMC sentences in the read data
-  GNSS_Module.getDataRef ("GPRMC").print(); // Printed the GPRMC sentences in preformatted format
+  GNSS_Module.read (1024);
+  GNSS_Module.extractNMEA();
+  String GNSS_Data = GNSS_Module.getNmeaDataString();
+
+  GNSS_Module.getDataRef ("GPRMC").find (GNSS_Data); // Find the GPRMC sentences in the read data
+  GNSS_Module.getDataRef ("GPRMC").print(); // Print the GNRMC sentences in preformatted format
   delay (10);
 }
 

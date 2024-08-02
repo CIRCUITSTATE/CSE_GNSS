@@ -3,8 +3,8 @@
 /**
  * @file CSE_GNSS.h
  * @brief Main header file for CSE_GNSS library.
- * @date +05:30 09:42:21 PM 30-03-2024, Saturday
- * @version 0.1.2
+ * @date +05:30 12:27:46 AM 03-08-2024, Saturday
+ * @version 1.0.1
  * @author Vishnu Mohanan (@vishnumaiea)
  * @par GitHub Repository: https://github.com/CIRCUITSTATE/CSE_GNSS
  * @par MIT License
@@ -25,7 +25,9 @@
   #include <SoftwareSerial.h> //software serial doesn't work with Arduino Due
 #endif
 
-#define   CONST_SERIAL_BUFFER_LENGTH     4096
+#define   CONST_SERIAL_BUFFER_LENGTH     4096   // The buffer size for GNSS serial data and NMEA data.
+#define   CONST_MAX_NMEA_LINES_COUNT     64     // The maximum number of NMEA lines that will be scanned to find an occurence.
+#define   CONST_MAX_NMEA_FIELDS_COUNT    64     // The maximum number of fields count in a NMEA sentence.
 
 //======================================================================================//
 // Forward declarations.
@@ -46,7 +48,7 @@ class NMEA_0183_Data {
     String sentence; // Comma separated NMEA sentence
     String sample; // NMEA sentence sample
     int dataCount; // Number of data in the NMEA sentence, including the header and separate checksum
-    const static int dataMax = 64; // Maximum number of data fields in the NMEA sentence
+    const static int dataMax = CONST_MAX_NMEA_FIELDS_COUNT; // Maximum number of data fields in the NMEA sentence
     String dataList [dataMax]; // NMEA data fields as an array of strings
     String dataNameList [dataMax]; // NMEA data field names as an array of strings
 
@@ -55,7 +57,7 @@ class NMEA_0183_Data {
     bool print(); // Print the NMEA sentence
     bool set (String line); // Set the NMEA sentence
     bool check (String line); // Check if the NMEA sentence is valid
-    bool find (String lines, int occurrence = 0); // Find the NMEA sentence in the lines
+    bool find (String lines, int occurrence = 1); // Find the NMEA sentence in the lines
     int count (String lines); // Count the number of particular NMEA sentence in the lines
     int getDataIndex (String dataName); // Get the index of the data field name
 };
@@ -83,17 +85,18 @@ class CSE_GNSS {
     bool inited;  // True if the GNSS module serial port is initialized.
     std::vector <NMEA_0183_Data*> dataList;  // List of NMEA data objects.
     int dataCount; // The number of NMEA data objects in the dataList.
-  
+
+
   public:
     typedef NMEA_0183_Data& NMEA_0183_Data_Ref;
 
     NMEA_0183_Data* dummyData; // A dummy NMEA data object to return if the requested data is not found.
 
-    char serialBuffer [CONST_SERIAL_BUFFER_LENGTH] = {0}; // A buffer to store the serial data.
-    char linesBuffer [CONST_SERIAL_BUFFER_LENGTH] = {0}; // A buffer to store the NMEA data.
+    char gnssDataBuffer [CONST_SERIAL_BUFFER_LENGTH] = {0}; // A buffer to store the GNSS serial data.
+    char nmeaDataBuffer [CONST_SERIAL_BUFFER_LENGTH] = {0}; // A buffer to store the NMEA data.
 
-    uint16_t serialBufferLength = 0;  // Indicates how many valid bytes are in the serial buffer.
-    uint16_t linesBufferLength = 0; // Indicates how many valid lines are in the lines buffer.
+    uint16_t gnssDataBufferLength = 0;  // Indicates how many valid bytes are in the GNSS serial buffer.
+    uint16_t nmeaDataBufferLength = 0; // Indicates how many valid lines are in the NMEA data buffer.
 
     // Constructor using two hardware serial ports.
     CSE_GNSS (HardwareSerial* gnssSerial, HardwareSerial* debugSerial, uint64_t gnssBaud = 0, uint64_t debugBaud = 0);
@@ -105,9 +108,9 @@ class CSE_GNSS {
 
     bool begin(); // Initialize the serial ports if necessary.
     uint16_t read (int byteCount);  // Read a specified number of bytes from the GNSS serial port.
-    uint16_t extractNMEA();
-    String readNMEA (int lineCount); // Read the specified number of NMEA lines from the GNSS serial port.
-    String readNMEA (String header = "$GPRMC", int lineCount = 1); // Read a single type of NMEA message.
+    uint16_t extractNMEA(); // Extract NMEA data from the GNSS serial buffer. This will remove any redundant or unsupported data.
+    String getNmeaDataString(); // Converts the NMEA data lines buffer to a Arduino String.
+
     int addData (NMEA_0183_Data* data); // Add an NMEA data object to the dataList.
     int getDataCount(); // Get the number of NMEA data objects in the dataList.
     NMEA_0183_Data_Ref getDataRef (String name);  // Get the reference of the NMEA data object.
