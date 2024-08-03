@@ -26,7 +26,7 @@
 #endif
 
 #define   CONST_SERIAL_BUFFER_LENGTH     4096   // The buffer size for GNSS serial data and NMEA data.
-#define   CONST_MAX_NMEA_LINES_COUNT     64     // The maximum number of NMEA lines that will be scanned to find an occurence.
+#define   CONST_MAX_NMEA_LINES_COUNT     64     // The maximum number of NMEA lines that will be scanned to find an occurrence.
 #define   CONST_MAX_NMEA_FIELDS_COUNT    64     // The maximum number of fields count in a NMEA sentence.
 
 //======================================================================================//

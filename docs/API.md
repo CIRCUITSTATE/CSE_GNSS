@@ -24,6 +24,8 @@ Version 0.1.2, +05:30 12:51:09 AM 31-03-2024, Sunday
     - [`CSE_GNSS()`](#cse_gnss)
     - [`begin()`](#begin)
     - [`read()`](#read)
+    - [`extractNMEA()`](#extractnmea)
+    - [`getNmeaDataString()`](#getnmeadatastring)
     - [`addData()`](#adddata)
     - [`getDataCount()`](#getdatacount)
     - [`getDataRef()`](#getdataref)
@@ -32,6 +34,12 @@ Version 0.1.2, +05:30 12:51:09 AM 31-03-2024, Sunday
 ## Macros
 
 `SOFTWARE_SERIAL_REQUIRED` - Determines if the software serial port should be enabled based on the architecture of the microcontroller. Currently, AVR and ESP8266 support software serial. If the `SoftwareSerial` is required, the `SoftwareSerial.h` library is included automatically.
+
+`CONST_SERIAL_BUFFER_LENGTH` - The buffer size for GNSS serial data and NMEA data.
+
+`CONST_MAX_NMEA_LINES_COUNT` - The maximum number of NMEA lines that will be scanned to find an occurrence.
+
+`CONST_MAX_NMEA_FIELDS_COUNT` - The maximum number of fields count in a NMEA sentence.
 
 ## Classes
 
@@ -226,14 +234,18 @@ A generic class to read and write GNSS modules with a serial interface. Supports
 
 ### Member Variables
 
-* `HardwareSerial* gnssSerial` : A pointer to the hardware serial port for the GNSS.
-* `SoftwareSerial* debugSerial` : A pointer to the hardware serial port for the debug messages. Optional for devices without a second hardware serial port.
-* `HardwareSerial* debugSerial` : A pointer to the hardware serial port for the debug messages.
+* `HardwareSerial* GNSS_Serial` : A pointer to the hardware serial port for the GNSS.
+* `SoftwareSerial* GNSS_Serial` : A pointer to the hardware serial port for the GNSS module. Optional, only used for devices without a second hardware serial port.
+* `HardwareSerial* Debug_Serial` : A pointer to the hardware serial port for the debug messages.
 * `uint64_t gnssBaud` : The baud rate of the GNSS port.
 * `uint64_t debugBaud` : The baud rate of the debug port.
 * `bool inited` : True if the GNSS module serial port is initialized.
 * `std::vector <NMEA_0183_Data*> dataList` : List of NMEA data objects.
 * `int dataCount` : The number of NMEA data objects in the `dataList`.
+* `char gnssDataBuffer [CONST_SERIAL_BUFFER_LENGTH]` : A buffer to store the GNSS serial data.
+* `char nmeaDataBuffer [CONST_SERIAL_BUFFER_LENGTH]` : A buffer to store the NMEA serial data.
+* `uint16_t gnssDataBufferLength` : The length of valid bytes in the `gnssDataBuffer`.
+* `uint16_t nmeaDataBufferLength` : The length of valid bytes in the `nmeaDataBuffer`.
 
 * `NMEA_0183_Data* dummyData` : A dummy NMEA data object to return if the requested data is not found.
 
@@ -305,39 +317,60 @@ None
 
 ### `read()`
 
-Read the NMEA data from the GNSS module. There are two overloads of this function.
+Read specified number of bytes from the GNSS module. The data is saved to the `gnssDataBuffer` and the length of valid bytes is saved to the `gnssDataBufferLength`.
 
-#### Syntax 1
+#### Syntax
 
-This accepts an NMEA header name, for example "$GPRMC", and reads a complete set of lines from and between the next occurrence of the same header. The lines will be separated by a newline character.
 
 ```cpp
-GNSS_Module.read (String header);
+GNSS_Module.read (int byteCount);
 ```
 
 ##### Parameters
 
-* `header` : The NMEA header name, for example "$GPRMC". Default is "$GPRMC".
+* `byteCount` : The number of bytes to read. Can not exceed `CONST_SERIAL_BUFFER_LENGTH`.
 
 ##### Returns
 
-* _`String`_ : The read string.
+* _`uint16_t`_ : The number of bytes read.
 
-#### Syntax 2
+### `extractNMEA()`
 
-This accepts the number of lines you want to read from the GNSS module. The lines will be separated by a newline character.
+Extract the NMEA sentences from the `gnssDataBuffer` and save them to the `nmeaDataBuffer`. Non-printable characters, and extra <CR> characters are removed. Each NMEA line is stored with a single newline character separating them. This makes it easy to later fetch the data.
+
+You should read the data from the GNSS module using the `read()` function before calling this function.
+
+#### Syntax
 
 ```cpp
-GNSS_Module.read (int lineCount);
+GNSS_Module.extractNMEA();
 ```
 
 ##### Parameters
 
-* `lineCount` : The number of lines to read.
+None
 
 ##### Returns
 
-* _`String`_ : The read string.
+* _`uint16_t`_ : The number of valid bytes found.
+
+### `getNmeaDataString()`
+
+Returns the contents of the `nmeaDataBuffer` as a String object.
+
+#### Syntax
+
+```cpp
+GNSS_Module.getNmeaDataString();
+```
+
+##### Parameters
+
+None
+
+##### Returns
+
+* _`String`_ : The contents of the `nmeaDataBuffer` as a String object.
 
 ### `addData()`
 
