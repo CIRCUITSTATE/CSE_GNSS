@@ -25,8 +25,8 @@ The library can also be installed via **PlatformIO**. All officially listed Ardu
 
 Two example sketches are included with this library which you can find inside the `examples` folder.
 
-* `Print_GPRMC` - Directly reads the NMEA output from the GNSS module and prints it on the serial monitor.
-* `View_GNSS_Data` - Reads the NMEA output from the GNSS module, extract the data and prints it on the serial monitor in key-value format.
+* `Print_GPRMC` - Reads the NMEA output from the GNSS module and extracts the GPRMC sentence and prints it on the serial monitor.
+* `View_GNSS_Data` - Directly reads raw NMEA output from the GNSS module and prints it to the serial monitor.
 
 # Tutorial
 

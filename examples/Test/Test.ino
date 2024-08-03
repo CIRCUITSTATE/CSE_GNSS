@@ -17,15 +17,19 @@
 
 //======================================================================================//
 
-#define   PORT_GPS_SERIAL       Serial1 // GPS serial port
-#define   PORT_DEBUG_SERIAL     Serial // Debug serial port
+#define   PORT_GPS_SERIAL         Serial1   // GPS serial port
+#define   PORT_DEBUG_SERIAL       Serial    // Debug serial port
 
 // For RP2040
-#define   PIN_GPS_SERIAL_TX      0
-#define   PIN_GPS_SERIAL_RX      1
+#define   PIN_GPS_SERIAL_TX       0
+#define   PIN_GPS_SERIAL_RX       1
 
-#define   VAL_GPS_BAUDRATE       115200
-#define   VAL_DEBUG_BAUDRATE     115200
+// // For ESP32
+// #define   PIN_GPS_SERIAL_TX       16
+// #define   PIN_GPS_SERIAL_RX       17
+
+#define   VAL_GPS_BAUDRATE        115200
+#define   VAL_DEBUG_BAUDRATE      115200
 
 //======================================================================================//
 // Forward declarations
@@ -56,7 +60,7 @@ void setup() {
   PORT_DEBUG_SERIAL.begin (VAL_DEBUG_BAUDRATE);
 
   // // For ESP32 boards
-  // PORT_GPS_SERIAL.begin (VAL_GPS_BAUDRATE, SERIAL_8N1, 17, 16);
+  // PORT_GPS_SERIAL.begin (VAL_GPS_BAUDRATE, SERIAL_8N1, PIN_GPS_SERIAL_RX, PIN_GPS_SERIAL_TX);
 
   // For RP2040
   PORT_GPS_SERIAL.setTX (PIN_GPS_SERIAL_TX);
@@ -70,7 +74,7 @@ void setup() {
   GNSS_Module.addData (&NMEA_GNRMC); // Add the data object to the GNSS module.
 
   PORT_DEBUG_SERIAL.println();
-  PORT_DEBUG_SERIAL.println ("--- CSE_GNSS Test ---");
+  PORT_DEBUG_SERIAL.println ("--- CSE_GNSS [Test] ---");
   delay (1000);
 }
 
@@ -80,12 +84,6 @@ void setup() {
  * 
  */
 void loop() {
-  // GNSS_Module.read (255); // Read multiple NMEA data lines from the GNSS module and print them directly.
-  // PORT_DEBUG_SERIAL.println (String (GNSS_Module.serialBuffer, GNSS_Module.serialBufferLength));
-
-  // int i = GNSS_Module.extractNMEA();
-  // GNSS_Module.readNMEA (3);
-
   GNSS_Module.read (1024);
   GNSS_Module.extractNMEA();
   String GNSS_Data = GNSS_Module.getNmeaDataString();
