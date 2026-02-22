@@ -25,7 +25,7 @@ The library can also be installed via [**PlatformIO**](https://platformio.org). 
 
 ## Dependencies
 
-This library depends on the following libraries:
+This library does not have any external dependencies apart from the standard Arduino libraries.
 
 # Examples
 
