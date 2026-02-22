@@ -19,7 +19,7 @@ Another method is to clone the GitHub repository directly into your libraries fo
 git clone https://github.com/CIRCUITSTATE/CSE_GNSS.git
 ```
 
-[**Git**](https://git-scm.com) should be installed on your computer.
+[**Git**](https://git-scm.com) should be installed in your computer.
 
 The library can also be installed via [**PlatformIO**](https://platformio.org). All officially listed Arduino listed libraries are automatically fetched by PlatformIO. Use the [`lib_deps`](https://docs.platformio.org/en/latest/projectconf/sections/env/options/library/lib_deps.html) search option to install the library.
 
