@@ -21,12 +21,12 @@
 #define   PORT_DEBUG_SERIAL       Serial    // Debug serial port
 
 // For RP2040
-#define   PIN_GPS_SERIAL_TX       0
-#define   PIN_GPS_SERIAL_RX       1
+// #define   PIN_GPS_SERIAL_TX       0
+// #define   PIN_GPS_SERIAL_RX       1
 
-// // For ESP32
-// #define   PIN_GPS_SERIAL_TX       16
-// #define   PIN_GPS_SERIAL_RX       17
+// For ESP32
+#define   PIN_GPS_SERIAL_TX       16
+#define   PIN_GPS_SERIAL_RX       17
 
 #define   VAL_GPS_BAUDRATE        115200
 #define   VAL_DEBUG_BAUDRATE      115200
@@ -59,13 +59,13 @@ NMEA_0183_Data NMEA_GNRMC ("GNRMC", GNRMC_Description, 15, GNRMC_Data_Names, GNR
 void setup() {
   PORT_DEBUG_SERIAL.begin (VAL_DEBUG_BAUDRATE);
 
-  // // For ESP32 boards
-  // PORT_GPS_SERIAL.begin (VAL_GPS_BAUDRATE, SERIAL_8N1, PIN_GPS_SERIAL_RX, PIN_GPS_SERIAL_TX);
+  // For ESP32 boards
+  PORT_GPS_SERIAL.begin (VAL_GPS_BAUDRATE, SERIAL_8N1, PIN_GPS_SERIAL_RX, PIN_GPS_SERIAL_TX);
 
   // For RP2040
-  PORT_GPS_SERIAL.setTX (PIN_GPS_SERIAL_TX);
-  PORT_GPS_SERIAL.setRX (PIN_GPS_SERIAL_RX);
-  PORT_GPS_SERIAL.begin (VAL_GPS_BAUDRATE, SERIAL_8N1);
+  // PORT_GPS_SERIAL.setTX (PIN_GPS_SERIAL_TX);
+  // PORT_GPS_SERIAL.setRX (PIN_GPS_SERIAL_RX);
+  // PORT_GPS_SERIAL.begin (VAL_GPS_BAUDRATE, SERIAL_8N1);
 
   // // For other boards.
   // PORT_GPS_SERIAL.begin (VAL_GPS_BAUDRATE);
@@ -84,14 +84,45 @@ void setup() {
  * 
  */
 void loop() {
-  GNSS_Module.read (1024);
-  GNSS_Module.extractNMEA();
-  String GNSS_Data = GNSS_Module.getNmeaDataString();
+  // GNSS_Module.read (1024);
+  // GNSS_Module.extractNMEA();
+  // String GNSS_Data = GNSS_Module.getNmeaDataString();
 
-  GNSS_Module.getDataRef ("GNRMC").find (GNSS_Data); // Find the GNRMC sentences in the read data
-  GNSS_Module.getDataRef ("GNRMC").print(); // Printed the GNRMC sentences in preformatted format
+  // GNSS_Module.getDataRef ("GNRMC").find (GNSS_Data); // Find the GNRMC sentences in the read data
+  // GNSS_Module.getDataRef ("GNRMC").print(); // Printed the GNRMC sentences in preformatted format
 
-  delay (500);
+  // delay (500);
+
+  readGNSS();
+}
+
+//======================================================================================//
+
+void readGNSS() {
+  if (PORT_GPS_SERIAL.available() > 0) {
+    // String line = PORT_GPS_SERIAL.readStringUntil ('\n'); // NMEA lines end with '\r\n'.
+    // PORT_DEBUG_SERIAL.println (line);
+    // PORT_DEBUG_SERIAL.write (PORT_GPS_SERIAL.read());
+
+    char c = PORT_GPS_SERIAL.read();
+    if (c == '\n') {
+      PORT_DEBUG_SERIAL.print ("<LF>");
+      PORT_DEBUG_SERIAL.println();
+    }
+    else if (c == '\r') {
+      PORT_DEBUG_SERIAL.print ("<CR>");
+    }
+    else {
+      PORT_DEBUG_SERIAL.write (c);
+    }
+  }
+
+  if (PORT_DEBUG_SERIAL.available() > 0) {
+    char c = PORT_DEBUG_SERIAL.read();
+    PORT_GPS_SERIAL.write (c);
+  }
+
+  delay (10);
 }
 
 //======================================================================================//

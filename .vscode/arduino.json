@@ -1,6 +1,6 @@
 {
-    "configuration": "flash=2097152_0,freq=133,opt=Small,rtti=Disabled,stackprotect=Disabled,exceptions=Disabled,dbgport=Disabled,dbglvl=None,usbstack=picosdk,ipbtstack=ipv4only,uploadmethod=default",
-    "board": "rp2040:rp2040:rpipico",
-    "port": "COM14",
-    "sketch": "examples\\View_GNSS_Data\\View_GNSS_Data.ino"
+    "configuration": "FlashFreq=80,UploadSpeed=921600,DebugLevel=none,EraseFlash=none",
+    "board": "esp32:esp32:esp32doit-devkit-v1",
+    "port": "COM24",
+    "sketch": "examples\\Test\\Test.ino"
 }

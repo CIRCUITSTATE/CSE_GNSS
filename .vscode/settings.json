@@ -9,6 +9,7 @@
     "streambuf": "cpp",
     "deque": "cpp",
     "vector": "cpp",
-    "initializer_list": "cpp"
+    "initializer_list": "cpp",
+    "compare": "cpp"
   }
 }
